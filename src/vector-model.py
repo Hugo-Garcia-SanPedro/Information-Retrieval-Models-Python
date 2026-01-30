@@ -62,6 +62,143 @@ def tokenize(text, stopwords):
     return tokens
 
 # Vector Space Model Logic
+class SearchEngine:
+    def __init__(self):
+        self.documents = {} # {filename: content}
+        self.doc_tokens = {} # {filename: [tokens]}
+        self.vocab = sorted([]) 
+        self.tf = {} # {filename: {term: freq}}
+        self.idf = {} # {term: idf_val}
+        self.weights = {} # {filename: {term: tf-idf}}
+        self.stopwords = load_stopwords()
+
+    def load_documents(self):
+        # Reads all txt files from DATA_DIR.
+        if not os.path.exists(DATA_DIR):
+            print(f"Error: Directory {DATA_DIR} does not exist.")
+            return
+
+        files = [f for f in os.listdir(DATA_DIR) if f.endswith('.txt')]
+        if not files:
+            print("No .txt files found in data directory.")
+            return
+
+        print(f"Loading {len(files)} documents...")
+        all_terms = set()
+
+        for filename in files:
+            path = os.path.join(DATA_DIR, filename)
+            content = read_file(path)
+            self.documents[filename] = content
+            
+            # Tokenize
+            tokens = tokenize(content, self.stopwords)
+            self.doc_tokens[filename] = tokens
+            
+            # Calculate TF (Raw Frequency)
+            term_counts = Counter(tokens)
+            self.tf[filename] = term_counts
+            all_terms.update(term_counts.keys())
+
+        self.vocab = sorted(list(all_terms))
+        self.calculate_weights()
+
+    def calculate_weights(self):
+        """Calculates TF-IDF for all documents."""
+        N = len(self.documents)
+        
+        # Calculate IDF
+        for term in self.vocab:
+            # df: number of docs containing the term
+            df = sum(1 for f in self.documents if term in self.tf[f])
+            self.idf[term] = math.log10(N / df) if df > 0 else 0
+
+        # Calculate TF-IDF Weights
+        for filename in self.documents:
+            self.weights[filename] = {}
+            for term in self.vocab:
+                tf_val = self.tf[filename].get(term, 0)
+                # Standard TF*IDF. 
+                # Note: Some implementations use (1+log(tf)), but prompts usually imply raw tf * idf
+                w = tf_val * self.idf[term]
+                self.weights[filename][term] = w
+
+    def get_query_vector(self, query_str):
+        # Converts query string to a vector (dict) using system IDF.
+        tokens = tokenize(query_str, self.stopwords)
+        tf_q = Counter(tokens)
+        query_vec = {}
+        
+        for term in self.vocab:
+            # Query weight = tf(in query) * idf(from collection)
+            tf_val = tf_q.get(term, 0)
+            query_vec[term] = tf_val * self.idf.get(term, 0)
+            
+        return query_vec
+
+    def cosine_similarity(self, vec_a, vec_b):
+        # Calculates cosine similarity between two vectors (dicts).
+        dot_product = 0.0
+        norm_a = 0.0
+        norm_b = 0.0
+
+        # We iterate over the vocabulary to ensure alignment
+        for term in self.vocab:
+            val_a = vec_a.get(term, 0)
+            val_b = vec_b.get(term, 0)
+            
+            dot_product += val_a * val_b
+            norm_a += val_a ** 2
+            norm_b += val_b ** 2
+
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        
+        return dot_product / (math.sqrt(norm_a) * math.sqrt(norm_b))
+    
+    def search(self, query_vec):
+        # Returns sorted list of (filename, score).
+        scores = []
+        for filename, doc_vec in self.weights.items():
+            sim = self.cosine_similarity(query_vec, doc_vec)
+            if sim > 0:
+                scores.append((filename, sim))
+        
+        # Sort by score descending
+        return sorted(scores, key=lambda x: x[1], reverse=True)
+    
+    def rocchio_feedback(self, original_q_vec, rel_docs, non_rel_docs):
+        # Implements: q_m = alpha*q_0 + beta*(1/|Dr| * sum(Dr)) - gamma*(1/|Dnr| * sum(Dnr))
+        new_q_vec = {}
+
+        # Pre-calculate centroids
+        # We need to process every term in the vocabulary
+        for term in self.vocab:
+            # 1. Alpha * Original
+            val_original = original_q_vec.get(term, 0) * ALPHA
+            
+            # 2. Beta * Average Relevant
+            sum_rel = sum(self.weights[doc][term] for doc in rel_docs)
+            avg_rel = (sum_rel / len(rel_docs)) if rel_docs else 0
+            val_rel = BETA * avg_rel
+            
+            # 3. Gamma * Average Non-Relevant
+            sum_nrel = sum(self.weights[doc][term] for doc in non_rel_docs)
+            avg_nrel = (sum_nrel / len(non_rel_docs)) if non_rel_docs else 0
+            val_nrel = GAMMA * avg_nrel
+            
+            # Combine
+            new_weight = val_original + val_rel - val_nrel
+            
+            # Negative weights are usually handled by setting to 0 in standard VSM,
+            # though strict Rocchio allows them (to penalize terms). 
+            # We will keep them, but cosine handles them naturally (penalizing match).
+            if new_weight < 0: 
+                new_weight = 0 # It is safer to clamp to 0 for standard search engines
+                
+            new_q_vec[term] = new_weight
+            
+        return new_q_vec
 
 # Function for main and menu
 def print_menu():
