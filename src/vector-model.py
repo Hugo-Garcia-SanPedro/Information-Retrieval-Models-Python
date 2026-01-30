@@ -73,21 +73,21 @@ class SearchEngine:
         self.stopwords = load_stopwords()
 
     def load_documents(self):
-        # Reads all txt files from DATA_DIR.
-        if not os.path.exists(DATA_DIR):
-            print(f"Error: Directory {DATA_DIR} does not exist.")
+        # Reads all rep files from PROCESSED_DIR.
+        if not os.path.exists(PROCESSED_DIR):
+            print(f"Error: Directory {PROCESSED_DIR} does not exist.")
             return
 
-        files = [f for f in os.listdir(DATA_DIR) if f.endswith('.txt')]
+        files = [f for f in os.listdir(PROCESSED_DIR) if f.endswith('.rep')]
         if not files:
-            print("No .txt files found in data directory.")
+            print("No .rep files found in data directory.")
             return
 
         print(f"Loading {len(files)} documents...")
         all_terms = set()
 
         for filename in files:
-            path = os.path.join(DATA_DIR, filename)
+            path = os.path.join(PROCESSED_DIR, filename)
             content = read_file(path)
             self.documents[filename] = content
             
@@ -229,7 +229,7 @@ def main():
                 print(f" - {doc}")
 
         elif choice == 'b':
-            fname = input("Insert the name of the file (ej: d1.txt): ")
+            fname = input("Insert the name of the file (ej: d1.rep): ")
             if fname in engine.documents:
                 print(f"\n--- Content of {fname} ---")
                 print(engine.documents[fname])
@@ -237,7 +237,7 @@ def main():
                 print("Error: Document not found.")
 
         elif choice == 'c':
-            fname = input("Insert the name of the file (ej: d1.txt): ")
+            fname = input("Insert the name of the file (ej: d1.rep): ")
             if fname in engine.weights:
                 print(f"\n--- (Weights TF-IDF) of {fname} ---")
                 # Showing only non-zero weights for readability
