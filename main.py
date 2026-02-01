@@ -2,47 +2,42 @@ import os
 import sys
 import runpy
 
-# Configuración: Nombre de la carpeta donde están los scripts
 SRC_FOLDER = 'src'
 
 def run_script(script_name):
-    # Construimos la ruta completa (ej: src/vector-model.py)
     script_path = os.path.join(SRC_FOLDER, script_name)
 
-    # Verificamos que el archivo exista en esa ruta
     if not os.path.exists(script_path):
-        print(f"\n[ERROR] No se encuentra el archivo: {script_path}")
-        print(f"Asegúrate de que '{script_name}' esté dentro de la carpeta '{SRC_FOLDER}'.")
+        print(f"\n[ERROR]: {script_path}")
+        print(f"Make sure that '{script_name}' is inside the '{SRC_FOLDER}' folder.")
         return
 
-    print(f"\n--- Iniciando ejecución de {script_name} ---")
+    print(f"\n--- Executing file {script_name} ---")
     try:
-        # runpy ejecuta el archivo estableciendo correctamente el contexto (__file__)
-        # Esto es vital para que tus scripts encuentren la carpeta 'data'
         runpy.run_path(script_path, run_name="__main__")
     except KeyboardInterrupt:
-        print("\nEjecución interrumpida por el usuario.")
+        print("\nExecution interrupted by the user.")
     except Exception as e:
-        print(f"\n[ERROR] Ocurrió un fallo al ejecutar '{script_name}': {e}")
+        print(f"\n[ERROR] An error occurred while executing '{script_name}': {e}")
     
-    print(f"--- Fin de ejecución de {script_name} ---\n")
+    print(f"--- End of execution of {script_name} ---\n")
 
 def main():
     while True:
         print("\n=======================================================")
-        print("   SISTEMA DE RECUPERACIÓN DE INFORMACIÓN (Main Menu)  ")
+        print("   INFORMATION RETRIEVAL SYSTEM (Main Menu)  ")
         print("=======================================================")
-        print(f"Scripts ubicados en: ./{SRC_FOLDER}/")
+        print(f"Scripts: ./{SRC_FOLDER}/")
         print("-------------------------------------------------------")
-        print("1. Normalización de Textos  (normalization.py)")
-        print("2. Indexación               (indexing.py)")
-        print("3. Modelo Booleano          (boolean-model.py)")
-        print("4. Modelo Vectorial         (vector-model.py)")
-        print("5. Modelo Probabilístico    (probabilistic.py)")
-        print("0. Salir")
+        print("1. Normalization of text (normalization.py)")
+        print("2. Indexing (indexing.py)")
+        print("3. Boolean model (boolean-model.py)")
+        print("4. Vector model (vector-model.py)")
+        print("5. Probabilistic model (probabilistic.py)")
+        print("0. Exir")
         print("=======================================================")
 
-        choice = input("Opción > ").strip()
+        choice = input("Option > ").strip()
 
         if choice == '1':
             run_script('normalization.py')
@@ -55,14 +50,13 @@ def main():
         elif choice == '5':
             run_script('probabilistic.py')
         elif choice == '0':
-            print("Saliendo del sistema...")
+            print("Exiting...")
             break
         else:
-            print("\nOpción no válida. Por favor, selecciona un número del menú.")
+            print("\nInvalid option. Please select a number from the menu.")
 
 if __name__ == "__main__":
-    # Opcional: Verificar que la carpeta src existe antes de arrancar
     if not os.path.isdir(SRC_FOLDER):
-        print(f"[ADVERTENCIA] No se encuentra la carpeta '{SRC_FOLDER}' en este directorio.")
+        print(f"[WARNING] The folder '{SRC_FOLDER}' cannot be found in this directory.")
     
     main()
